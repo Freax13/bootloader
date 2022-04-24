@@ -17,6 +17,8 @@ members = [
     "bios",
     "bios/boot_sector",
     "bios/second_stage",
+    "pxe",
+    "pxe/first_stage",
     "tests/runner",
     "tests/test_kernels/default_settings",
     "tests/test_kernels/map_phys_mem",
@@ -35,6 +37,12 @@ mbrman = "0.4.2"
 [dependencies.bootloader-x86_64-bios]
 version = "0.1.0-alpha.0"
 path = "bios"
+artifact = ["bin"]
+target = "x86_64-unknown-none"
+
+[build-dependencies.bootloader-x86_64-pxe]
+version = "0.1.0-alpha.0"
+path = "pxe"
 artifact = ["bin"]
 target = "x86_64-unknown-none"
 
@@ -61,6 +69,21 @@ lto = true
 codegen-units = 1
 debug = false
 overflow-checks = false
+
+[profile.pxe-first-stage]
+inherits = "release"
+opt-level = 3
+lto = true
+codegen-units = 1
+debug = false
+overflow-checks = false
+
+[profile.dev.package."bootloader-x86_64-pxe"]
+opt-level = 3
+codegen-units = 1
+debug = false
+overflow-checks = false
+# rustflags = ["-C", "relocation-model=static"]
 
 [profile.test.package.test_kernel_higher_half]
 rustflags = [

@@ -6,6 +6,7 @@ use std::{
 const BOOTLOADER_X86_64_UEFI_VERSION: &str = "0.1.0-alpha.0";
 const BOOTLOADER_X86_64_BIOS_BOOT_SECTOR_VERSION: &str = "0.1.0-alpha.0";
 const BOOTLOADER_X86_64_BIOS_SECOND_STAGE_VERSION: &str = "0.1.0-alpha.0";
+const BOOTLOADER_X86_64_PXE_FIRST_STAGE_VERSION: &str = "0.1.0-alpha.0";
 
 fn main() {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
@@ -25,6 +26,17 @@ fn main() {
     println!(
         "cargo:rustc-env=BIOS_SECOND_STAGE_PATH={}",
         bios_second_stage_path.display()
+    );
+
+    let pxe_first_stage_path = build_pxe_first_stage(&out_dir);
+    println!(
+        "cargo:rustc-env=PXE_FIRST_STAGE_PATH={}",
+        pxe_first_stage_path.display()
+    );
+    let pxe_bootloader_path = build_pxe_bootloader(&out_dir);
+    println!(
+        "cargo:rustc-env=PXE_BOOTLOADER_PATH={}",
+        pxe_bootloader_path.display()
     );
 }
 
@@ -136,6 +148,67 @@ fn build_bios_second_stage(out_dir: &Path) -> PathBuf {
         panic!("failed to build bios second stage");
     };
     convert_elf_to_bin(elf_path)
+}
+
+fn build_pxe_first_stage(out_dir: &Path) -> PathBuf {
+    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
+    let mut cmd = Command::new(cargo);
+    cmd.arg("install").arg("bootloader-x86_64-pxe-first-stage");
+    let local_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("pxe")
+        .join("first_stage");
+    if local_path.exists() {
+        // local build
+        cmd.arg("--path").arg(&local_path);
+    } else {
+        cmd.arg("--version")
+            .arg(BOOTLOADER_X86_64_PXE_FIRST_STAGE_VERSION);
+    }
+    cmd.arg("--locked");
+    cmd.arg("--target").arg("x86-16bit.json");
+    cmd.arg("--profile").arg("pxe-first-stage");
+    cmd.arg("-Zbuild-std=core")
+        .arg("-Zbuild-std-features=compiler-builtins-mem");
+    cmd.arg("--root").arg(out_dir);
+    cmd.env_remove("RUSTFLAGS");
+    cmd.env_remove("RUSTC_WORKSPACE_WRAPPER"); // used by clippy
+    let status = cmd
+        .status()
+        .expect("failed to run cargo install for pxe first stage");
+    let elf_path = if status.success() {
+        let path = out_dir
+            .join("bin")
+            .join("bootloader-x86_64-pxe-first-stage");
+        assert!(
+            path.exists(),
+            "pxe first stage executable does not exist after building"
+        );
+        path
+    } else {
+        panic!("failed to build pxe first stage");
+    };
+
+    let bin = convert_elf_to_bin(elf_path);
+
+    // Make sure that the first stage doesn't exceed the recommended size.
+    let metadata = std::fs::metadata(&bin).unwrap();
+    assert!(
+        metadata.len() <= 32768,
+        "first pxe stage is too big: {} bytes",
+        metadata.len()
+    );
+
+    bin
+}
+
+fn build_pxe_bootloader(out_dir: &Path) -> PathBuf {
+    let bootloader_path = std::env::var("CARGO_BIN_FILE_BOOTLOADER_X86_64_PXE")
+        .expect("binary dependency should set `CARGO_BIN_FILE_BOOTLOADER_X86_64_PXE`");
+    let bootloader_path =
+        Path::new("/home/freax13/Documents/code/rust/bootloader/bootloader-x86_64-pxe");
+    let new_bootloader_path = out_dir.join("pxe-bootloader");
+    std::fs::copy(bootloader_path, &new_bootloader_path).unwrap();
+    convert_elf_to_bin(new_bootloader_path)
 }
 
 fn convert_elf_to_bin(elf_path: PathBuf) -> PathBuf {

@@ -78,6 +78,7 @@ use std::{
 mod fat;
 mod gpt;
 mod mbr;
+mod pxe;
 
 const KERNEL_FILE_NAME: &str = "kernel-x86_64";
 
@@ -118,6 +119,16 @@ pub fn create_bios_disk_image(
         out_mbr_path,
     )
     .context("failed to create BIOS MBR disk image")?;
+
+    Ok(())
+}
+
+pub fn create_pxe_tftp_folder(kernel_binary: &Path, out_path: &Path) -> anyhow::Result<()> {
+    let first_stage_path = Path::new(env!("PXE_FIRST_STAGE_PATH"));
+    let bootloader_path = Path::new(env!("PXE_BOOTLOADER_PATH"));
+
+    pxe::create_tftp_folder(first_stage_path, bootloader_path, kernel_binary, out_path)
+        .context("failed to create PXE tftp folder")?;
 
     Ok(())
 }
