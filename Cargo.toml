@@ -32,12 +32,6 @@ fatfs = "0.3.4"
 gpt = "3.0.0"
 mbrman = "0.4.2"
 
-[dependencies.bootloader-x86_64-bios]
-version = "0.1.0-alpha.0"
-path = "bios"
-artifact = ["bin"]
-target = "x86_64-unknown-none"
-
 [dev-dependencies]
 bootloader_test_runner = { path = "tests/runner" }
 test_kernel_default_settings = { path = "tests/test_kernels/default_settings", artifact = "bin", target = "x86_64-unknown-none" }
