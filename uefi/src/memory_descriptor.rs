@@ -3,6 +3,8 @@ use bootloader_x86_64_common::legacy_memory_region::LegacyMemoryRegion;
 use uefi::table::boot::{MemoryDescriptor, MemoryType};
 use x86_64::PhysAddr;
 
+pub const KERNEL_MEMORY_TYPE: MemoryType = MemoryType::custom(0x80000000);
+
 #[derive(Debug, Copy, Clone)]
 pub struct UefiMemoryDescriptor(pub MemoryDescriptor);
 
