@@ -1,5 +1,5 @@
 use anyhow::Context;
-use std::{collections::BTreeMap, fs, io, path::Path};
+use std::{cmp, collections::BTreeMap, fs, io, path::Path};
 
 use crate::KERNEL_FILE_NAME;
 
@@ -36,8 +36,9 @@ pub fn create_fat_filesystem(
             let converted = name.to_string_lossy();
             let name = converted.as_bytes();
             let mut new_label = [0u8; 11];
-            let name = &name[..new_label.len()];
-            let slice = &mut new_label[..name.len()];
+            let len = cmp::min(name.len(), new_label.len());
+            let name = &name[..len];
+            let slice = &mut new_label[..len];
             slice.copy_from_slice(name);
             label = new_label;
         }
